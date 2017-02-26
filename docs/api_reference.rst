@@ -1,8 +1,9 @@
+**********************************
 API Reference
-===========================
+**********************************
 
 Documents
------------
+=========
 
 Manage document inventories, their versions, and their various stages of processing.
 
@@ -17,7 +18,7 @@ Manage document inventories, their versions, and their various stages of process
 	:show-inheritance:
 	
 Tokens
-------
+======
 
 Store token inventories and their vectors. Compute similarities and export token similarity graph.
 
@@ -27,7 +28,7 @@ Store token inventories and their vectors. Compute similarities and export token
 	:show-inheritance:
 	
 Senses
-------
+======
 
 Store sense inventories and their vectors.
 
@@ -37,7 +38,7 @@ Store sense inventories and their vectors.
 	:show-inheritance:
 
 Phrases
------------
+=======
 
 Combine tokens into common phrases in preparation for Word2Vec training.
 
@@ -47,7 +48,7 @@ Combine tokens into common phrases in preparation for Word2Vec training.
 	:show-inheritance:
 	
 Word2Vec
---------
+========
 
 Word2Vec model for training token vectors in a token inventory.
 
