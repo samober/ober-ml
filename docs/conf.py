@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../'))
 
 import mock
-MOCK_MODULES = [ "numpy", "gensim", "gensim.models", "gensim.models.word2vec", "gensim.models.word2vec.Vocab", "gensim.models.Phrases", "gensim.models.phrases.Phrases", "gensim.models.phrases.Phraser", "ober.tokens.tokens_inner", "cython", "cython.parallel", "scipy.linalg.blas", "bz2", "tokens_inner", "libc.stdio", "libc.stdlib", "libc.string", "Cython", "Cython.Build", "distutils", "distutils.core" ]
+MOCK_MODULES = [ "numpy", "gensim", "gensim.models", "gensim.models.word2vec", "Cython", "Cython.Build", "tokens_inner", "ober.tokens.tokens_inner" ]
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
@@ -69,12 +69,12 @@ release = u'1.0.0'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "python"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', "tokens_inner", ".java"]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
