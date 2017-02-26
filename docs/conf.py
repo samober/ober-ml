@@ -22,7 +22,7 @@ import sys
 #sys.path.insert(0, os.path.abspath('../'))
 sys.path.insert(0, os.path.abspath('../'))
 
-autodoc_mock_imports = [ "gensim", "numpy", "tokens_inner" ]
+autodoc_mock_imports = [ "gensim", "gensim.models.word2vec", "numpy", "tokens_inner" ]
 
 
 # -- General configuration ------------------------------------------------

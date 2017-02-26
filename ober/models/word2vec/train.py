@@ -26,6 +26,13 @@ class Word2Vec:
         print (len(self.token_database), self.token_database.vector_size)
             
     def train(self):
+        """
+        
+        Trains the Word2Vec model on a batch of random sentences from the document inventory.
+        
+        Updates the vectors in the token inventory once complete and saves them to disk.
+        
+        """
         print "Training ..."
         batch = random.randint(1, self.document_database.num_batches())
         sentences = self.document_database.get_sentences(batch=batch)
