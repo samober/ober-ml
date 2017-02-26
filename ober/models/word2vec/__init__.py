@@ -1,0 +1,1 @@
+from train import Word2Vec
