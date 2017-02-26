@@ -1,5 +1,5 @@
 import numpy as np
-import os.path
+import os
 from collections import defaultdict
 import codecs
 from tokens_inner import export_distributed_graph

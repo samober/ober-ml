@@ -5,6 +5,30 @@ import codecs
 import random
 
 class DocumentDatabase:
+	"""
+	
+	A ``DocumentDatabase`` manages a set of documents in the document inventory with a specified version and subset.
+	
+	For example, you could have a ``DocumentDatabase`` of all documents in a document set called "bigrams", which store documents after being run through a bigram phraser. 
+	
+	You could also have multiple versions of your inventory within this set. For example, if you add a sizeable number of new documents and update your phraser, you could then rephrase all your documents into version 2 of the bigrams document set.
+	
+	This is illustrated below:
+		
+	.. code-block:: python
+	
+		from ober.documents import DocumentDatabase
+		
+		# load a document database located at 'data/documents'
+		# from version 1 of the document set "bigrams"
+		document_database = DocumentDatabase.load(db_path="data/documents", version=1, document_set="bigrams")
+		
+		### DO SOME WORK
+		
+		# save the new documents to version 2 of the document set "bigrams"
+		document_database.save("data/documents", version=2, document_set="bigrams")
+	
+	"""
 	
 	def __init__(self, db_path="data/documents", version=None, document_set="trigrams"):
 		self.db_path = db_path
@@ -61,6 +85,14 @@ class DocumentDatabase:
 		return total_sentences
 		
 	def add_documents(self, documents):
+		"""
+		
+		Adds :class:`documents` to the document inventory, writing to disk in batches of 500,000.
+		
+		:param documents: An iterator of JSON documents.
+		:type documents: :class:`Iterator[dict]`
+		
+		"""
 		DocumentDatabase.ensure_documents_dir(self.db_path, self.version, self.document_set)
 		more_documents = True
 		while more_documents:

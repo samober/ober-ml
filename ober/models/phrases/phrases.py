@@ -7,6 +7,41 @@ import argparse
 from ober.documents import DocumentDatabase
 
 class Phrases:
+    """
+    
+    Creates a model for finding the most common token pairs and combining them.
+    
+    For example, the sentence:
+    
+    ``the``, ``man``, ``went``, ``to``, ``buy``, ``some``, ``ice``, ``cream``, ``.``
+
+    would turn into:
+    
+    ``the``, ``man``, ``went``, ``to``, ``buy``, ``some``, ``ice_cream``, ``.``
+    
+
+    **Usage:**
+        
+    .. code-block:: python   
+   
+        from ober.models.phrases import Phrases
+        
+        # load existing model
+        phrases = Phrases.load(db_path, version)
+        # or create a new one
+        phrases = Phrases("data/phrases/bigram", version=1, documents_version=1, document_set="reddit")
+        
+        # train on sentences
+        phrases.train()
+        
+        # save model
+        phrases.save()
+        
+        # phrase documents
+        phrases.phrase_documents(documents_version=2, document_set="reddit_bigrams")
+    
+    """
+    
     def __init__(self, db_path, version=None, documents_version=None, document_set=None):
         self.db_path = db_path
         self.version = version
@@ -18,20 +53,35 @@ class Phrases:
         self.batches_trained = 0
         
         self.model = None
-    
-    def init_model(self):
-        self.model = gensim.models.Phrases(threshold=15.0)
         
     def enable_fast_model(self):
+        """
+        Convert model to lightweight model for faster phrasing.
+        """
         self.model = gensim.models.phrases.Phraser(self.model)
         
     def train(self):
+        """
+        
+        Iterates through sentences from the model's :class:`ober.documents.DocumentDatabase` and updates phraser model.
+        
+        """
         document_database = DocumentDatabase.load(version=self.documents_version, document_set=self.document_set)
         # create model
         self.model = gensim.models.Phrases(document_database.get_sentences(), threshold=15.0)
         self.batches_trained = document_database.num_batches()
         
     def phrase_documents(self, documents_version, documents_set):
+        """
+        
+        Phrase each sentence of each document in the document inventory and export.
+        
+        :param documents_version: The version of the documents inventory to export.
+        :type documents_version: int
+        :param documents_set: The document inventory set to export to.
+        :type documents_set: str
+        
+        """
         self.enable_fast_model()
         
         document_database = DocumentDatabase.load(version=self.documents_version, document_set=self.document_set)
@@ -41,6 +91,16 @@ class Phrases:
         new_document_database.add_documents(self.phrase_documents_iter(documents))
         
     def phrase_documents_iter(self, documents):
+        """
+        
+        Iterates over `documents` and returns phrases documents.
+        
+        :param documents: The documents to phrase.
+        :type documents: list[dict]
+        :return: An iterator of JSON documents.
+        :rtype: iter[dict]
+        
+        """
         for document in documents:
             for paragraph in document["paragraphs"]:
                 for sentence in paragraph["sentences"]:
@@ -48,6 +108,16 @@ class Phrases:
             yield document
         
     def save(self, db_path=None, version=None):
+        """
+        
+        Saves this :class:`Phrases` model to file.
+        
+        :param db_path: `(optional)` Path to the phrase inventory.
+        :type db_path: str
+        :param version: `(optional)` Version to export as.
+        :type version: int
+        
+        """
         if not db_path:
             db_path = self.db_path
         if not version:
@@ -67,6 +137,20 @@ class Phrases:
         
     @staticmethod
     def load(db_path, version, fast_model=False):
+        """
+        
+        Loads a :class:`Phrases` model from file.
+        
+        :param db_path: The path to the phrase inventory.
+        :type db_path: str
+        :param version: The version of the phrase model to load.
+        :type version: int
+        :param fast_model: If True, enable fast phrasing (will disable training).
+        :type fast_model: bool
+        :return: :class:`Phrases` object for the phrase model.
+        :rtype: :class:`ober.models.phrases.Phrases`
+        
+        """
         # load info file
         info_file = Phrases.get_info_file(db_path, version)
         # read json
@@ -84,6 +168,16 @@ class Phrases:
         
     @staticmethod
     def get_latest_version(db_path):
+        """
+        
+        Return the latest version of the phrase inventory.
+        
+        :param db_path: The path to the phrase inventory.
+        :type db_path: str
+        :return: The version number of the most recent phrase model.
+        :rtype: int
+        
+        """
         max_version = 0
         for f in os.listdir(db_path):
             if f.endswith(".phrases"):
@@ -98,14 +192,46 @@ class Phrases:
         
     @staticmethod
     def get_model_file(db_path, version):
+        """
+        
+        Return the model file path for the phrase model at db_path
+        
+        :param db_path: The path to the phrase inventory.
+        :type db_path: str
+        :param version: The version of the phrase model.
+        :type version: int
+        :return: The model file path for the phrase model.
+        :rtype: str
+        
+        """
         return os.path.join(db_path, "%05d.phrases" % version)
         
     @staticmethod
     def get_info_file(db_path, version):
+        """
+        
+        Return the path to a phrase model's information file.
+        
+        :param db_path: The path to the phrase inventory.
+        :type db_path: str
+        :param version: The phrase model version.
+        :type version: int
+        :return: An information file path.
+        :rtype: str
+        
+        """
         return os.path.join(db_path, "%05d.info.json" % version)
         
     @staticmethod
     def ensure_phrases_dir(db_path):
+        """
+        
+        Create required directories for this phrase inventory.
+        
+        :param db_path: The path to the desired phrase inventory.
+        :type db_path: str
+        
+        """
         if not os.path.exists(db_path):
             os.makedirs(db_path)
             
