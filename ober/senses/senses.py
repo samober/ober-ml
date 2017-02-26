@@ -26,6 +26,24 @@ class SenseDatabase:
 		self.vectors_version = vectors_version
 		
 	def add_sense(self, sense):
+		"""
+		
+		Add a sense to the sense inventory.
+		
+		Senses are in the form ``<token>#<sense_id>``
+		
+		Example:
+			
+		.. code-block:: python
+		
+			# token = 'flying'
+			# sense_id = 2
+			sense_database.add_sense("flying#2")
+		
+		:param sense: The sense to add.
+		:type sense: str
+		
+		"""
 		if not sense in self.sense2index:
 			self.sense2index[sense] = len(self.index2sense)
 			self.index2sense.append(sense)

@@ -20,6 +20,16 @@ Store token inventories and their vectors. Compute similarities and export token
 	:members:
 	:undoc-members:
 	:show-inheritance:
+	
+Senses
+------
+
+Store sense inventories and their vectors.
+
+.. autoclass:: ober.senses.SenseDatabase
+	:members:
+	:undoc-members:
+	:show-inheritance:
 
 Phrases
 -----------
