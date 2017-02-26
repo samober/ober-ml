@@ -10,6 +10,16 @@ Manage document inventories, their versions, and their various stages of process
 	:members:
 	:undoc-members:
 	:show-inheritance:
+	
+Tokens
+------
+
+Store token inventories and their vectors. Compute similarities and export token similarity graph.
+
+.. autoclass:: ober.tokens.TokenDatabase
+	:members:
+	:undoc-members:
+	:show-inheritance:
 
 Phrases
 -----------
