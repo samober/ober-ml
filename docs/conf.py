@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../'))
 
 import mock
-MOCK_MODULES = [ "numpy", "gensim", "gensim.models", "gensim.models.word2vec", "gensim.models.Phrases", "gensim.models.phrases.Phraser", "ober.tokens.tokens_inner", "argparse" ]
+MOCK_MODULES = [ "numpy", "gensim", "gensim.models", "gensim.models.word2vec", "gensim.models.phrases", "ober.tokens.tokens_inner", "argparse", "subprocess", "struct", "cython", "cython.parallel", "scipy.linalg.blas" ]
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
