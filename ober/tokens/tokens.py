@@ -5,10 +5,34 @@ import codecs
 from tokens_inner import export_distributed_graph
     
 class TokenDatabase:
+    """
+    
+    A ``TokenDatabase`` is an interface to the token inventory. It stores all tokens, token frequencies, and token vectors.
+    
+    It allows for fast and simple encoding and decoding of token sequences to and from integer ids.
+    
+    Encoding:
+        
+    .. code-block:: python
+    
+        sentence = [ "the", "man", "sat", "on", "the", "bench" ]
+        token_database.encode(sentence)
+        # [ 10, 356, 5832, 9432, 10, 28473 ]
+        
+    Decoding:
+        
+    .. code-block:: python
+    
+        sentence = [ 10, 356, 5832, 9432, 10, 28473 ]
+        token_database.decode(sentence)
+        # [ "the", "man", "sat", "on", "the", "bench" ]
+    
+    """
     
     PAD_TOKEN = "<PAD>"
+    """ Special token ``<PAD>`` for padding token sequences. """
     UNK_TOKEN = "<UNK>"
-    START_VOCAB = [ PAD_TOKEN, UNK_TOKEN ]
+    """ Special token ``<UNK>`` for unknown values during encoding/decoding. """
     
     def __init__(self, vector_size=300, db_path="data/tokens", version=None, vectors_version=None):
         self.vector_size = vector_size
@@ -20,7 +44,7 @@ class TokenDatabase:
         self.vectors = None
         self.norm_vectors = None
         
-        self.add_tokens(TokenDatabase.START_VOCAB, counts=[1000, 1000])
+        self.add_tokens([ TokenDatabase.PAD_TOKEN, TokenDatabase.UNK_TOKEN ], counts=[1000, 1000])
             
         self.pad_token = TokenDatabase.PAD_TOKEN
         self.unk_token = TokenDatabase.UNK_TOKEN
@@ -50,6 +74,16 @@ class TokenDatabase:
         self.token_freq[token] += count
         
     def add_tokens(self, tokens, counts=None):
+        """
+        
+        Adds all tokens from the list ``tokens`` to the token inventory.
+        
+        :param tokens: List of tokens to add.
+        :type tokens: ``list[str]``
+        :param counts: *(optional)* List of frequency counts for each token.
+        :type counts: ``list[int]``
+        
+        """
         if not counts:
             counts = [1] * len(tokens)
         for index, token in enumerate(tokens):

@@ -1,1 +1,1 @@
-from documents import DocumentDatabase
+from documents import DocumentDatabase, BatchStats

@@ -11,6 +11,11 @@ Manage document inventories, their versions, and their various stages of process
 	:undoc-members:
 	:show-inheritance:
 	
+.. autoclass:: ober.documents.BatchStats
+	:members:
+	:undoc-members:
+	:show-inheritance:
+	
 Tokens
 ------
 
