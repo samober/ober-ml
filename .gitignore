@@ -98,5 +98,5 @@ ENV/
 .ropeproject
 
 # Data files
-data/
-web/
+/data/
+/web/
