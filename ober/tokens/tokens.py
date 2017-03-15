@@ -6,6 +6,7 @@ from tokens_inner import export_distributed_graph
 from ober.data import VersionedFile
     
 class TokenDatabase:
+    
     """
     
     A ``TokenDatabase`` is an interface to the token inventory. It stores all tokens, token frequencies, and token vectors.
@@ -36,26 +37,35 @@ class TokenDatabase:
     """ Special token ``<UNK>`` for unknown values during encoding/decoding. """
     
     def __init__(self, vector_size=300, db_path="data/tokens", version=None, vectors_version=None):
+        # set vector size
         self.vector_size = vector_size
         
+        # create hash for quickly determining a token's index
         self.token2index = {}
+        # create list for quickly determining an id's token text
         self.index2token = []
+        # dictionary to store the token counts
         self.token_freq = defaultdict(int)
         
+        # hold the token vectors and their normalized versions
         self.vectors = None
         self.norm_vectors = None
         
+        # by default, add the unknown and padding tokens with counts of 1000
         self.add_tokens([ TokenDatabase.PAD_TOKEN, TokenDatabase.UNK_TOKEN ], counts=[1000, 1000])
             
+        # helpful values
         self.pad_token = TokenDatabase.PAD_TOKEN
         self.unk_token = TokenDatabase.UNK_TOKEN
         self.pad_value = self.token2index[TokenDatabase.PAD_TOKEN]
         self.unk_value = self.token2index[TokenDatabase.UNK_TOKEN]
         
+        # set database information
         self.db_path = db_path
         self.version = version
         self.vectors_version = vectors_version
         
+        # setup file systems
         self.file_base = None
         self.version_vectors = None
         
@@ -63,14 +73,19 @@ class TokenDatabase:
         self._load_file_system(version=self.version)
         self._load_vectors_file_system(vectors_version=self.vectors_version)
         
+    # HELPER METHODS    
+        
+    # gets the path to the counts.vocab file
     def _get_counts_path(self):
         return self.file_base.get_file_path(self.version, "counts.vocab")
         
+    # gets the path to a specific token vectors file in numpy format
     def _get_vectors_file(self, vectors_version):
         if not vectors_version:
             return self.version_vectors.get_latest_file_path("vectors.npy")
         return self.version_vectors.get_file_path(vectors_version, "vectors.npy")
             
+    # loads/resets the main file system and optionally increments the version
     def _load_file_system(self, version=None, new_version=False):
         # create the file system
         self.file_base = VersionedFile(self.db_path)
@@ -82,6 +97,7 @@ class TokenDatabase:
         if new_version or self.version == 0:
             self.version = self.file_base.create_latest_version()
             
+    # loads/resets the vector file system and optionally increments the version
     def _load_vectors_file_system(self, vectors_version=None, new_version=False):
         # create the file system
         self.version_vectors = VersionedFile(self.file_base.get_file_path(self.version, "vectors"), version_num_length=4)
@@ -94,6 +110,7 @@ class TokenDatabase:
             self.vectors_version = self.version_vectors.create_latest_version()
         
     def add_token(self, token, count=1):
+        
         """
         
         Add a token to this token database and increment it's count.
@@ -104,14 +121,19 @@ class TokenDatabase:
         :type count: int
    
         """
+        
+        # don't add black tokens
         if token.strip() == "":
             return
+        # check if this token is already in the database
         if not token in self.token2index:
             self.token2index[token] = len(self.index2token)
             self.index2token.append(token)
+        # increment the frequency
         self.token_freq[token] += count
         
     def add_tokens(self, tokens, counts=None):
+        
         """
         
         Adds all tokens from the list ``tokens`` to the token inventory.
@@ -122,12 +144,16 @@ class TokenDatabase:
         :type counts: ``list[int]``
         
         """
+        
+        # if counts is None create a filler array with count 1 for each new token
         if not counts:
             counts = [1] * len(tokens)
+        # add each token individually
         for index, token in enumerate(tokens):
             self.add_token(token, count=counts[index])
             
     def encode_token(self, token):
+        
         """
         
         Returns the token id for the given token, otherwise returns the id for the special <UNK> token.
@@ -138,11 +164,15 @@ class TokenDatabase:
         :rtype: int
         
         """
+        
+        # return unknown if token is not in the database
         if token not in self.token2index:
             return self.unk_value
+        # return the token id
         return self.token2index[token]
 
     def encode(self, tokens):
+        
         """
         
         Takes an array of plain text tokens and returns an array of their corresponding token ids.
@@ -153,9 +183,12 @@ class TokenDatabase:
         :rtype: ``List[int]``
         
         """
+        
+        # encode each individual token
         return [ self.encode_token(token) for token in tokens ]
         
     def decode_token(self, index):
+        
         """
         
         Returns the plain text of the token with index ``index``.
@@ -166,9 +199,12 @@ class TokenDatabase:
         :rtype: str
         
         """
+        
+        # look up the id in the token array
         return self.index2token[index]
 
     def decode(self, indices):
+        
         """
         
         Takes an array of indices and returns an array of their corresponding plain text tokens.
@@ -179,9 +215,12 @@ class TokenDatabase:
         :rtype: ``List[str]``
         
         """
+        
+        # decode each id individually
         return [ self.decode_token(index) for index in indices ]
         
     def get_freq(self, token):
+        
         """
         
         Returns the frequency the specified token has occured in the training corpus.
@@ -192,9 +231,12 @@ class TokenDatabase:
         :rtype: int
         
         """
+        
+        # look up token in the token count hash
         return self.token_freq[token]
         
     def generate_random_vectors(self):
+        
         """
         
         Generates random token vectors for all tokens using a uniform distribution.
@@ -202,9 +244,13 @@ class TokenDatabase:
         Use this for initializing vectors for new databases or before transfering old vectors to a new database.
         
         """
+        
+        # create a (vocab count, vector size) numpy array from a random uniform distribution
+        # cast it to float32 type and set it our new vectors
         self.vectors = np.float32(np.random.uniform(-0.5/self.vector_size, 0.5/self.vector_size, size=(len(self), self.vector_size)))
         
     def load_vectors(self, vectors_version=None):
+        
         """
         
         Loads the vectors from disk.
@@ -215,9 +261,12 @@ class TokenDatabase:
         :type vectors_version: bool
         
         """
+        
+        # load the numpy array from file
         self.vectors = np.load(self._get_vectors_file(vectors_version))
         
     def get_vectors(self):
+        
         """
         
         Returns the token vectors for this token database.
@@ -226,9 +275,11 @@ class TokenDatabase:
         :rtype: ``np.ndarray``
         
         """
+        
         return self.vectors
 
     def update_vectors(self, vectors):
+        
         """
         
         Updates the current token vectors with new ones.
@@ -239,10 +290,13 @@ class TokenDatabase:
         :type vectors: ``np.ndarray``
         
         """
+        
+        # make sure these vectors are the right shape
         assert vectors.shape == (len(self), self.vector_size)
         self.vectors = vectors
             
     def save_vectors(self, new_version=True):
+        
         """
         
         Saves the vectors to disk.
@@ -253,6 +307,7 @@ class TokenDatabase:
         :type new_version: bool
         
         """
+        
         # create a new version if flagged
         if new_version:
             self.vectors_version = self.version_vectors.create_latest_version()
@@ -260,6 +315,7 @@ class TokenDatabase:
         np.save(self._get_vectors_file(self.vectors_version), self.get_vectors())
         
     def get_norm_vectors(self, calculate=False):
+        
         """
         
         Returns the normalized token vectors for this database.
@@ -270,11 +326,15 @@ class TokenDatabase:
         :rtype: ``np.ndarray``
         
         """
+        
+        # if calculate is True or we have no normalized vectors -> calculate them
         if calculate or self.norm_vectors is None:
+            # this takes the magnitude of each vector and then divides each vectors by its magnitude
             self.norm_vectors = self.get_vectors() / np.sqrt(np.sum(np.square(self.get_vectors()), axis=1, keepdims=True))
         return self.norm_vectors
         
     def most_similar(self, token, num_similar=12):
+        
         """
         
         Returns the most similar tokens based on the cosine similarity between token vectors.
@@ -287,6 +347,7 @@ class TokenDatabase:
         :rtype: ``List[Tuple[str, float]]``
         
         """
+        
         # if not a known token, return an empty list
         if token not in self.token2index:
             return []
@@ -309,6 +370,7 @@ class TokenDatabase:
             
     @staticmethod
     def load(db_path="data/tokens", version=None, vectors_version=None):
+        
         """
         
         Loads a specific version of the token database from disk.
@@ -323,6 +385,7 @@ class TokenDatabase:
         :rtype: ``TokenDatabase``
         
         """
+        
         # create the database
         db = TokenDatabase(db_path=db_path, version=version, vectors_version=vectors_version)
         # get the path to the counts file
@@ -344,6 +407,7 @@ class TokenDatabase:
         return db
                 
     def save(self, db_path=None, new_version=True, new_vectors_version=True):
+        
         """
         
         Saves this token database's vocabulary counts and word vectors to disk.
@@ -356,6 +420,7 @@ class TokenDatabase:
         :type new_vectors_version: bool
         
         """
+        
         # if db_path is new, completely re-initialize everything
         # if there is a new version, reload the file system and re-initialize the entire vectors file system
         # if there is only a new vectors version, just reload the vectors file system
@@ -378,13 +443,16 @@ class TokenDatabase:
         # get the path to the counts file and write counts
         counts_path = self._get_counts_path()
         with codecs.open(counts_path, "wb", "utf-8") as f:
+            # first write the vector size
             f.write("%d\n" % self.vector_size)
+            # then write each token in the format ({word}<TAB>{count}\n)
             for index, token in enumerate(self.index2token):
                 f.write("%s\t%d\n" % (token, self.token_freq[token]))
-        # save vectors (new version is taken care of above so no need here)
+        # save vectors (new version is taken care of above so no need to set new_version to True)
         self.save_vectors(new_version=False)
             
     def export_distributed_graph(self, n=200, batch_size=250):
+        
         """
         
         Exports a file with the data representing an undirected similarity graph of the entire vocabulary.
@@ -397,11 +465,13 @@ class TokenDatabase:
         :type batch_size: int
         
         """
+        
         # load up the graph file system
         graph_files = VersionedFile(self.file_base.get_file_path(self.version, "graphs"), version_num_length=4)
         # create a new version
         graph_files.create_latest_version()
         # get graph data file path
         graph_path = graph_files.get_latest_file_path("graph.dt")
+        # call our Cython function from tokens_inner to do the heavy lifting
         export_distributed_graph(self.get_norm_vectors(), graph_path, n=n, batch_size=batch_size)
         

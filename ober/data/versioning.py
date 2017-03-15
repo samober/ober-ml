@@ -44,10 +44,14 @@ class VersionedFile:
 		# current versions in directory (set)
 		self.versions = self._get_versions_list()
 		
+	# HELPER FUNCTIONS	
+	
+	# ensures the main directory path exists
 	def _ensure_directory_path(self):
 		if not os.path.exists(self.path):
 			os.makedirs(self.path)
 			
+	# ensures that a specific version path exists
 	def _ensure_version_path(self, version):
 		path = self.get_version_path(version)
 		if not os.path.exists(path):
@@ -55,10 +59,8 @@ class VersionedFile:
 			return True
 		return False
 		
+	# get the available versions by looking at the directories
 	def _get_versions_list(self):
-		"""
-		Returns a list of all the current versions in the directory (as integers)
-		"""
 		versions = set()
 		# list all paths in directory
 		for f in os.listdir(self.path):
@@ -70,6 +72,7 @@ class VersionedFile:
 		return versions
 			
 	def get_versions(self):
+		
 		"""
 		
 		Returns a list of all the versions currently available for this file system.
@@ -78,9 +81,11 @@ class VersionedFile:
 		:rtype: ``List[int]``
 		
 		"""
+		
 		return list(self.versions)
 			
 	def get_version_path(self, version):
+		
 		"""
 		
 		Gets the path to the directory for the specific version.
@@ -91,9 +96,12 @@ class VersionedFile:
 		:rtype: str
 		
 		"""
+		
+		# return the path for the directory by formatting the version number with the correct number of digits
 		return os.path.join(self.path, "{:0{length}}".format(version, length=self.version_num_length))
 		
 	def check_version_path(self, version):
+		
 		"""
 		
 		Checks if the current version's directory currently exists.
@@ -104,9 +112,11 @@ class VersionedFile:
 		:rtype: bool
 		
 		"""
+		
 		return os.path.exists(self.get_version_path(version))
 		
 	def get_latest_version(self):
+		
 		"""
 		
 		Returns the latest available version number for this file system.
@@ -115,11 +125,15 @@ class VersionedFile:
 		:rtype: int
 		
 		"""
+		
+		# make sure we have entries in the set before calling max
 		if len(self.versions) > 0:
 			return max(self.versions)
+		# otherwise return zero (no versions)
 		return 0
 		
 	def create_version(self, version):
+		
 		"""
 		
 		Creates a new version for the data if one does not already exist.
@@ -128,10 +142,13 @@ class VersionedFile:
 		:type version: int
 		
 		"""
+		
+		# make sure version is >= 1 and the version path exists
 		if version >= 1 and self._ensure_version_path(version):
 			self.versions.add(version)
 			
 	def get_file_path(self, version, filename, ignore_exists=False):
+		
 		"""
 		
 		Return the direct path to a file in a specific version directory.
@@ -146,11 +163,13 @@ class VersionedFile:
 		:rtype: str
 		
 		"""
+		
 		if ignore_exists or self.check_version_path(version):
 			return os.path.join(self.get_version_path(version), filename)
 		return None
 		
 	def get_file_paths(self, filename):
+		
 		"""
 		
 		Return a list of the direct paths to a data file for all versions in the file system.
@@ -161,12 +180,14 @@ class VersionedFile:
 		:rtype: ``List[Tuple[int, str]]``
 		
 		"""
+		
 		file_paths = []
 		for version in self.versions:
 			file_paths.append((version, self.get_file_path(version, filename)))
 		return file_paths
 		
 	def create_latest_version(self):
+		
 		"""
 		
 		Create a new version and make it the latest.
@@ -177,11 +198,13 @@ class VersionedFile:
 		:rtype: int
 		
 		"""
+		
 		new_version = self.get_latest_version() + 1
 		self.create_version(new_version)
 		return new_version
 		
 	def get_latest_file_path(self, filename, ignore_exists=False):
+		
 		"""
 		
 		Return the direct path to a file for the latest version in the directory.
@@ -194,4 +217,5 @@ class VersionedFile:
 		:rtype: str
 		
 		"""
+		
 		return self.get_file_path(self.get_latest_version(), filename, ignore_exists=ignore_exists)

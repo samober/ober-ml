@@ -1,5 +1,5 @@
 import os
-import bz2
+import gzip
 import json
 import codecs
 import random
@@ -7,6 +7,7 @@ import random
 from ober.data import VersionedFile
 
 class DocumentDatabase:
+	
 	"""
 	
 	A ``DocumentDatabase`` manages a set of documents in the document inventory with a specified version.
@@ -29,25 +30,25 @@ class DocumentDatabase:
 		# save the new documents to version 2
 		document_database.save("data/documents/bigrams", version=2)
 		
-	Documents are stored as JSON lines files by batches:
+	Documents are stored as JSON lines files by batches (gzip compressed):
 		
 	.. code-block:: python
 		
 		<inventory_directory>
 			<version_id>
 				<batch_id>
-					data.jl.bz2
+					data.jl.gz
 					stats.json
 				<batch_id>
-					data.jl.bz2
+					data.jl.gz
 					stats.json
 				[...]
 			<version_id>
 				<batch_id>
-					data.jl.bz2
+					data.jl.gz
 					stats.json
 				<batch_id>
-					data.jl.bz2
+					data.jl.gz
 					stats.json
 				[...]
 			[...]
@@ -73,7 +74,11 @@ class DocumentDatabase:
 	
 	"""
 	
+	# batch size for stream-adding files to the database
+	DOCUMENT_BATCH_SIZE = 500000
+	
 	def __init__(self, db_path="data/documents/trigrams", version=None):
+		# initialize db_path and version
 		self.db_path = db_path
 		self.version = version
 		
@@ -92,19 +97,26 @@ class DocumentDatabase:
 		# create batches file system under current version
 		self.version_batches = VersionedFile(self.file_base.get_version_path(self.version), version_num_length=4)
 		
+	# HELPER FUNCTIONS
+	
+	# gets the integer list of all batches
 	def _get_batches(self):
 		return self.version_batches.get_versions()
 		
+	# gets the string list of all the direct paths to the batch data files
 	def _get_batch_files(self):
-		return [ batch_file[1] for batch_file in self.version_batches.get_file_paths("data.jl.bz2") ]
+		return [ batch_file[1] for batch_file in self.version_batches.get_file_paths("data.jl.gz") ]
 		
+	# gets a specific path for a batch
 	def _get_batch_file(self, batch=1):
-		return self.version_batches.get_file_path(batch, "data.jl.bz2")
+		return self.version_batches.get_file_path(batch, "data.jl.gz")
 		
+	# gets a specific path for a batch statistics file
 	def _get_batch_stat_file(self, batch=1):
 		return self.version_batches.get_file_path(batch, "stats.json")
 			
 	def get_documents(self, batch=None):
+		
 		"""
 		
 		Returns an iterator of documents being read from disk.
@@ -117,20 +129,28 @@ class DocumentDatabase:
 		:rtype: ``Iterator[dict]``
 		
 		"""
+		
 		files = None
 		if not batch:
+			# no batch = all the batches
 			files = self._get_batch_files()
 		elif batch == "random":
+			# get all the batches and pick one from random
 			batches = self._get_batches()
 			files = [ self._get_batch_file(batch=random.randint(1, len(batches))) ]
 		else:
+			# get the specified batch
 			files = [ self._get_batch_file(batch=batch) ]
+			
+		# loop through all the batch files
 		for f in files:
-			with bz2.BZ2File(f, "r") as infile:
+			with gzip.open(f, "rb") as infile:
 				for line in infile:
+					# parse the JSON for each line
 					yield json.loads(line)
 					
 	def get_paragraphs(self, batch=None):
+		
 		"""
 		
 		Returns an interator of paragraphs being read from disk.
@@ -143,11 +163,15 @@ class DocumentDatabase:
 		:rtype: ``Iterator[dict]``
 		
 		"""
+		
+		# loop through the document stream for this document database
 		for document in self.get_documents(batch):
 			for paragraph in document["paragraphs"]:
-				yield paragraph["sentences"]
+				# yield the paragraphs one by one
+				yield paragraph
 		
 	def get_sentences(self, batch=None):
+		
 		"""
 		
 		Returns an interator of sentences being read from disk.
@@ -160,11 +184,16 @@ class DocumentDatabase:
 		:rtype: ``Iterator[list[str]]``
 		
 		"""
+		
+		# loop through the paragraph stream for this document database
 		for paragraph in self.get_paragraphs(batch):
-			for sentence in paragraph:
+			# loop through the sentences
+			for sentence in paragraph["sentences"]:
+				# yield the individual tokens
 				yield sentence["tokens"]
 				
 	def get_batch_stats(self, batch):
+		
 		"""
 		
 		Returns the ``BatchStats`` for a specific batch.
@@ -175,9 +204,11 @@ class DocumentDatabase:
 		:rtype: ``BatchStats``
 		
 		"""
+		
 		return self.batch_stats[batch]
 		
 	def num_batches(self):
+		
 		"""
 		
 		Returns the number of batches in the current document inventory.
@@ -186,9 +217,11 @@ class DocumentDatabase:
 		:rtype: int
 		
 		"""
+		
 		return len(self.batch_stats)
 		
 	def get_total_sentences(self):
+		
 		"""
 		
 		Convenience method that sums up all the sentences across all batches.
@@ -197,59 +230,72 @@ class DocumentDatabase:
 		:rtype: int
 		
 		"""
+		
+		# loop through batches and add up all their individual sentence counts
 		total_sentences = 0
 		for batch in self.batch_stats:
 			total_sentences += self.batch_stats[batch].total_sentences
 		return total_sentences
 		
 	def add_documents(self, documents):
+		
 		"""
 		
-		Adds :class:`documents` to the document inventory, writing to disk in batches of 500,000.
+		Adds ``documents`` to the document inventory, writing to disk in batches of 500,000.
 		
 		:param documents: An iterator of JSON documents.
 		:type documents: ``Iterator[dict]``
 		
 		"""
+		
+		# flag for StopIteration exceptions
 		more_documents = True
+		# loop while there are still documents in the iterator
 		while more_documents:
 			# increment batch number
 			batch = len(self.batch_stats) + 1
+			# count sentences
 			sentences_count = 0
-			# create temporary batch data file
-			batch_file = os.path.join(self.file_base.path, "data.jl.bz2.temp")
+			# create temporary batch data file in the version directory
+			batch_file = os.path.join(self.file_base.get_version_path(self.version), "data.jl.gz.temp")
 			# try to read the next batch of files, catch exception and stop if there are no more
 			try:
+				# get next document before opening the file just to make sure it's there
 				document = documents.next()
-				with bz2.BZ2File(batch_file, "w") as outfile:
-					for i in range(500000):
-						# count sentences
+				# open the data file
+				with gzip.open(batch_file, "wb") as outfile:
+					# loop through DOCUMENT_BATCH_SIZE documents
+					for i in range(DocumentDatabase.DOCUMENT_BATCH_SIZE):
+						# count sentences in document
 						for paragraph in document["paragraphs"]:
 							sentences_count += len(paragraph["sentences"])
-						# write JSON to file
+						# write JSON to file one line at a time
 						outfile.write("%s\n" % json.dumps(document))
 						# if we are not done with this batch, retrieve the next document
-						if i != 499999:
+						if i < DocumentDatabase.DOCUMENT_BATCH_SIZE - 1:
 							document = documents.next()
 			except StopIteration:
-				# the end of the documents stream
+				# the end of the documents stream, set the flag to False
 				more_documents = False
+			# make sure the batch isn't empty
 			if sentences_count > 0:
 				# create the new batch in the file system
 				self.version_batches.create_latest_version()
-				# write the batch statistics to file and save
-				batch_stat_file = self._get_batch_stat_file(batch)
+				# add the stats to the statistics hash
 				self.batch_stats[batch] = BatchStats(sentences_count)
-				with codecs.open(batch_stat_file, "wb", "utf-8") as outfile:
+				# write the batch statistics to file
+				with codecs.open(self._get_batch_stat_file(batch), "wb", "utf-8") as outfile:
+					# write the JSON representation for the stats
 					outfile.write(json.dumps(self.batch_stats[batch].to_json()))
-				# move temp data file to the correct location
+				# move the temp data file to the correct location inside the version folder
 				os.rename(batch_file, self._get_batch_file(batch)) 
 	
 	@staticmethod
 	def load(db_path="data/documents/trigrams", version=None):
+		
 		"""
 		
-		Loads a document inventory from ``docuemnt_set`` at ``db_path`` with version ``version``.
+		Loads a document database with the specified version from the directory.
 		
 		:param db_path: The path of the document inventory.
 		:type db_path: str
@@ -261,8 +307,10 @@ class DocumentDatabase:
 		:rtype: ``DocumentDatabase``
 		
 		"""
+		
 		# create database at the desired path and with the desired version
 		db = DocumentDatabase(db_path, version)
+		
 		# loop through batches
 		for batch in db._get_batches():
 			# get the path to the stats file
@@ -271,10 +319,13 @@ class DocumentDatabase:
 			stats_json = json.loads(codecs.open(stats_file, "rb", "utf-8").read())
 			# save in the batch statistics hash
 			db.batch_stats[batch] = BatchStats(stats_json["total_sentences"])
+			
+		# return the database
 		return db
 		
 	@staticmethod
 	def get_latest_version(db_path):
+		
 		"""
 		
 		Returns the latest version of the documents inventory at the specified path.
@@ -285,11 +336,12 @@ class DocumentDatabase:
 		:rtype: int
 		
 		"""
-		# create a file system
-		file_base = VersionedFile(db_path)
-		return file_base.get_latest_version()
+		
+		# create a file system and return latest version
+		return VersionedFile(db_path).get_latest_version()
 		
 class BatchStats:
+	
 	"""
 	
 	Stores information about a specific batch in a document inventory.
@@ -303,6 +355,7 @@ class BatchStats:
 		self.total_sentences = total_sentences
 		
 	def to_json(self):
+		
 		"""
 		
 		Returns a JSON representation of ``BatchStats``.
@@ -311,4 +364,5 @@ class BatchStats:
 		:rtype: ``dict``
 		
 		"""
+		
 		return { "total_sentences": self.total_sentences }
