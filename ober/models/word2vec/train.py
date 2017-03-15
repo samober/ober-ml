@@ -34,9 +34,9 @@ class Word2Vec:
         
         """
         print "Training ..."
-        batch = random.randint(1, self.document_database.num_batches())
-        sentences = self.document_database.get_sentences(batch=batch)
-        num_sentences = self.document_database.get_batch_stats(batch).total_sentences
+#        batch = random.randint(1, self.document_database.num_batches())
+        sentences = self.document_database.get_sentences()
+        num_sentences = self.document_database.get_total_sentences() #self.document_database.get_batch_stats(batch).total_sentences
         self.model.corpus_count = num_sentences
         self.model.train(sentences, total_examples=num_sentences)
         

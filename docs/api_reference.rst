@@ -56,3 +56,13 @@ Word2Vec model for training token vectors in a token inventory.
 	:members:
 	:undoc-members:
 	:show-inheritance:
+	
+Versioning
+==========
+
+A simple API for managing a system of versioned data files.
+
+.. autoclass:: ober.data.VersionedFile
+	:members:
+	:undoc-members:
+	:show-inheritance:
